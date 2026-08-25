@@ -46,9 +46,9 @@ python3 -m pip install -r requirements.txt
 
 ### Django Project & App Management
 
-Create a new Django project:
+Create a new Django project(add '.' at end to avoid further folder duplication):
 ```bash
-django-admin startproject <project_name>
+django-admin startproject <project_name> .
 ```
 
 Create a new app inside a project:
