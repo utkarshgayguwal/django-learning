@@ -81,7 +81,62 @@ Open the Django interactive shell:
 python manage.py shell
 ```
 
-## Notes / Q&A
+## Notes
+
+### Two ways to serve templates (HTML files)
+
+**Method 1: App-level templates (`APP_DIRS`)**
+
+Each app gets its own `templates/<app_name>/` folder:
+
+```
+app/
+├── templates/
+│   └── app/
+│       └── home.html
+├── views.py
+```
+
+This works because `APP_DIRS: True` in `TEMPLATES` tells Django to automatically look inside every installed app's `templates/` folder (via the `app_directories` loader). This is what this project currently uses — `app/templates/app/home.html` is found automatically because `'app'` is in `INSTALLED_APPS`.
+
+Why the nested `app_name/` subfolder? Namespacing. If two apps both had `templates/home.html`, Django's loader would grab whichever app it scans first — a silent collision. `templates/app/home.html` + `render(request, 'app/home.html')` avoids that.
+
+Good for: templates that belong to one specific app — reusable, self-contained, easy to package/reuse in another project.
+
+**Method 2: Project-level templates (`DIRS`)**
+
+A single shared `templates/` folder at the project root (next to `manage.py`), registered explicitly in `TEMPLATES[0]['DIRS']`:
+
+```
+manage.py
+templates/
+├── base.html
+├── home.html
+company/
+├── settings.py
+```
+
+```python
+# company/settings.py
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [BASE_DIR / 'templates'],   # or os.path.join(BASE_DIR, 'templates')
+        'APP_DIRS': True,
+        'OPTIONS': { ... },
+    },
+]
+```
+
+Now `render(request, 'home.html')` (or `base.html`) resolves from that shared folder — no app namespace needed.
+
+Good for: things shared across the whole site — `base.html` layout, `navbar.html`, `footer.html`, 404/500 error pages — anything not owned by a single app.
+
+**Resolution order:** with both configured, Django checks `DIRS` (project-level) first, then `APP_DIRS` (per-app, in `INSTALLED_APPS` order). So a `DIRS` template can shadow/override an app's template of the same relative path.
+
+**In practice:** most real Django projects use both together — project-level `templates/` for shared layout (`base.html`, `navbar.html`), and each app's `templates/<app_name>/` for that app's own pages, which `{% extends "base.html" %}`.
+
+## Q&A
 
 ### Q: When I run `python3 manage.py migrate`, where do the default migrations come from? Where is that code written?
 
