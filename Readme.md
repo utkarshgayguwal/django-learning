@@ -127,3 +127,94 @@ python manage.py startapp blog
 would be an **app** — it gets its own `models.py`, `views.py`, `admin.py`, etc., and must be registered in `company/settings.py` under `INSTALLED_APPS` and wired into `company/urls.py`.
 
 **Analogy:** project = the house, apps = the rooms — each room (app) serves a distinct purpose, but they all belong to and are coordinated by the same house (project).
+
+### Q: What is MVT (Model-View-Template) in Django?
+
+**MVT** is Django's architectural pattern — its take on MVC. Three pieces:
+
+- **Model** — defines the data structure and talks to the database (`models.py`)
+- **View** — contains the logic: receives the request, fetches/processes data via the Model, decides what to send back (`views.py`)
+- **Template** — the HTML that renders the data for the user (`templates/*.html`)
+
+Django itself acts as the "Controller" (via URL routing), so you only write M, V, and T.
+
+**Example flow — user visits `/blog/` to see a list of posts:**
+
+```
+ USER (Browser)
+     │  1. GET /blog/
+     ▼
+┌─────────────────────┐
+│   urls.py             │  2. Matches "/blog/" to a view function
+│   (URL dispatcher)    │
+└─────────┬────────────┘
+          │ 3. calls view
+          ▼
+┌─────────────────────┐
+│   views.py             │  4. def post_list(request):
+│   (View)               │        posts = Post.objects.all()
+└─────────┬────────────┘
+          │ 5. queries via ORM
+          ▼
+┌─────────────────────┐
+│   models.py             │  6. Post model → SQL query
+│   (Model)               │
+└─────────┬────────────┘
+          │ 7. hits database
+          ▼
+┌─────────────────────┐
+│   db.sqlite3             │  8. returns rows (Post objects)
+│   (Database)             │
+└─────────┬────────────┘
+          │ 9. QuerySet of posts returned to view
+          ▼
+┌─────────────────────┐
+│   views.py               │  10. return render(request,
+│                           │        "blog/post_list.html",
+│                           │        {"posts": posts})
+└─────────┬────────────┘
+          │ 11. passes data to template
+          ▼
+┌─────────────────────┐
+│   post_list.html          │  12. {% for post in posts %}
+│   (Template)               │        <h2>{{ post.title }}</h2>
+│                             │      {% endfor %}
+└─────────┬────────────┘
+          │ 13. renders final HTML
+          ▼
+ USER (Browser)
+     ◀── 14. HTTP response: rendered HTML page with blog posts
+```
+
+**Code sketch:**
+
+`models.py`
+```python
+class Post(models.Model):
+    title = models.CharField(max_length=200)
+    content = models.TextField()
+```
+
+`views.py`
+```python
+def post_list(request):
+    posts = Post.objects.all()
+    return render(request, "blog/post_list.html", {"posts": posts})
+```
+
+`urls.py`
+```python
+urlpatterns = [
+    path("blog/", views.post_list, name="post_list"),
+]
+```
+
+`templates/blog/post_list.html`
+```html
+{% for post in posts %}
+  <h2>{{ post.title }}</h2>
+  <p>{{ post.content }}</p>
+{% endfor %}
+```
+
+So the flow is: **User → URL → View → Model → Database → View → Template → User (HTML response)**.
