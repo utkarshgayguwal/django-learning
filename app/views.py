@@ -1,9 +1,19 @@
 from django.shortcuts import render
-from django.http import HttpResponse
 
 # Create your views here.
 def index(request):
-    return HttpResponse('Welcome To App Page')
+    context = {
+        'app_name': 'App',
+        'description': 'This page is served from the app-level template folder: app/templates/app/index.html.',
+        'tasks': [
+            {'name': 'Learn Models', 'done': True},
+            {'name': 'Learn Views', 'done': True},
+            {'name': 'Learn Templates', 'done': False},
+            {'name': 'Learn Forms', 'done': False},
+        ],
+        'version': '0.1',
+    }
+    return render(request, 'app/index.html', context)
 
 def home(request):
     context = {
@@ -16,4 +26,4 @@ def home(request):
         ],
         'visitor_count': 128,
     }
-    return render(request, 'app/home.html', context)
+    return render(request, 'home.html', context)
