@@ -115,3 +115,15 @@ INSTALLED_APPS = [
 5. Tracks which migrations have run in a table called `django_migrations` inside `db.sqlite3`.
 
 **For your own apps:** running `python manage.py startapp <name>` gives it an empty `migrations/` folder. Nothing exists there until you define models in that app's `models.py` and run `python manage.py makemigrations` — that's when Django writes migration files for your own code.
+
+### Q: What is a project and what is an app in Django?
+
+A **project** is the whole web application — the top-level configuration: settings, URL routing, WSGI/ASGI setup. An **app** is a self-contained module inside the project that handles one specific piece of functionality (e.g. blog posts, user profiles, payments). A project can contain multiple apps, and apps are meant to be reusable/pluggable.
+
+In this repo, `company` (created via `django-admin startproject company .`) is the **project**. A feature module added with:
+```bash
+python manage.py startapp blog
+```
+would be an **app** — it gets its own `models.py`, `views.py`, `admin.py`, etc., and must be registered in `company/settings.py` under `INSTALLED_APPS` and wired into `company/urls.py`.
+
+**Analogy:** project = the house, apps = the rooms — each room (app) serves a distinct purpose, but they all belong to and are coordinated by the same house (project).
