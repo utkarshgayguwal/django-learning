@@ -136,6 +136,156 @@ Good for: things shared across the whole site — `base.html` layout, `navbar.ht
 
 **In practice:** most real Django projects use both together — project-level `templates/` for shared layout (`base.html`, `navbar.html`), and each app's `templates/<app_name>/` for that app's own pages, which `{% extends "base.html" %}`.
 
+### Django Template Language (DTL) — variables, filters, tags
+
+**Variables — `{{ variable_name }}`**
+
+Whatever key you put in a view's `context` dict becomes a variable in the template. From `app/views.py`:
+
+```python
+context = {'app_name': 'App', 'tasks': [{'name': 'Learn Models', 'done': True}, ...]}
+return render(request, 'app/index.html', context)
+```
+
+```html
+<h1>{{ app_name }} Page</h1>
+```
+
+Dot notation (`{{ task.name }}`) works for dict keys, object attributes, list indices, and method calls — Django tries each in that order and uses whichever succeeds first.
+
+**Filters — `{{ value|filter }}`**
+
+Pipe a variable through a transformation. Filters chain left to right:
+
+```html
+{{ app_name|upper }}                  <!-- APP -->
+{{ description|truncatewords:8 }}
+{{ tasks|length }}
+{{ version|default:"0.0" }}
+{{ site_name|lower|title }}
+```
+
+Full reference: [built-in filters](https://docs.djangoproject.com/en/stable/ref/templates/builtins/#built-in-filter-reference).
+
+**For loops — `{% for %}`**
+
+Used in both `home.html` and `app/index.html`:
+
+```html
+{% for task in tasks %}
+  <li>{{ task.name }}</li>
+{% empty %}
+  <li>No tasks yet.</li>
+{% endfor %}
+```
+
+`{% empty %}` renders when the list is empty — no separate `{% if %}` needed. Inside the loop, `forloop.counter` (1-indexed), `forloop.counter0`, `forloop.first`, and `forloop.last` are available.
+
+**If conditions — `{% if %}`**
+
+Used in `app/index.html` to render a task's status:
+
+```html
+{% if task.done %}
+  <span class="status done">Done</span>
+{% else %}
+  <span class="status pending">Pending</span>
+{% endif %}
+```
+
+Also supports `{% elif %}`, comparisons (`==`, `!=`, `<`, `in`), and boolean operators (`and`, `or`, `not`).
+
+### Template inheritance — `{% extends %}` + `{% block %}`
+
+`home.html` and `app/index.html` currently each duplicate the full `<html><head>...` boilerplate. Inheritance removes that duplication.
+
+1. Define a **base template** with named regions (`{% block %}`) a child can override:
+
+```html
+<!-- templates/base.html -->
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Django Learning{% endblock %}</title>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    {% block content %}{% endblock %}
+</body>
+</html>
+```
+
+2. A child template extends it. `{% extends %}` must be the **first tag in the file** — nothing, not even whitespace-producing tags, can come before it. Anything outside a `{% block %}` in the child is ignored:
+
+```html
+<!-- templates/home.html -->
+{% extends 'base.html' %}
+{% block title %}{{ site_name }}{% endblock %}
+{% block content %}
+<h1>Welcome to {{ site_name }}</h1>
+{% endblock %}
+```
+
+Block names are arbitrary — `title`, `extra_head`, `content` above are project-defined, not built in. Add as many as needed (e.g. `scripts`, `sidebar`). Inside an override, `{{ block.super }}` keeps the parent block's content instead of fully replacing it.
+
+**Status in this project:** not yet adopted — `home.html` and `app/index.html` are still standalone, full-page templates.
+
+### Naming URLs and `{% url %}`
+
+`company/urls.py` currently has no `name=` on its routes:
+
+```python
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', home),
+    path('app/', index)
+]
+```
+
+Adding `name=` lets templates reference a route by name instead of a hardcoded path:
+
+```python
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', home, name='home'),
+    path('app/', index, name='app-index'),
+]
+```
+
+```html
+<a href="{% url 'home' %}">Home</a>
+<a href="{% url 'app-index' %}">App</a>
+```
+
+If the route later moves (e.g. `app/` → `demo/`), only `urls.py` changes — every `{% url %}` reference updates automatically. For routes with arguments (e.g. `path('app/<int:id>/', detail, name='app-detail')`), pass them positionally: `{% url 'app-detail' id %}`.
+
+**Status in this project:** not yet adopted — no named routes or `{% url %}` usage yet.
+
+### Reusable template fragments — `{% include %}`
+
+`{% include %}` renders another template's output inline — for markup reused across multiple pages (header, navbar, footer) that isn't shared "page layout" the way `{% extends %}` is.
+
+```html
+<!-- templates/partials/header.html -->
+<header>
+    <a href="{% url 'home' %}">{{ site_name|default:"Django Learning" }}</a>
+</header>
+```
+
+```html
+<!-- templates/base.html -->
+<body>
+    {% include 'partials/header.html' %}
+    {% block content %}{% endblock %}
+</body>
+```
+
+An included template inherits the full surrounding context by default. To override or pass extra variables explicitly: `{% include 'partials/header.html' with site_name="Custom Title" %}`.
+
+**Status in this project:** not yet adopted; `static/css/` (loaded via `{% load static %}` + `{% static %}`) is the equivalent pattern already in use for shared *assets* rather than shared *markup*.
+
 ## Q&A
 
 ### Q: When I run `python3 manage.py migrate`, where do the default migrations come from? Where is that code written?
