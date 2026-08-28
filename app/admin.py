@@ -10,6 +10,12 @@ class GeneralInfoAdmin(admin.ModelAdmin):
         'email'
     ]
 
+    list_display_links = ['company_name']
+
+    list_filter = ['location', 'phone']
+
+    search_fields = ['company_name']
+
     readonly_fields = [
         'email'
     ]
