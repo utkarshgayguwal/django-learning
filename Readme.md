@@ -15,6 +15,7 @@ This repository is my personal workspace for learning Django. It contains practi
   - [Template inheritance (extends and block)](#template-inheritance-extends-and-block)
   - [Naming URLs and the url tag](#naming-urls-and-the-url-tag)
   - [Reusable template fragments (include)](#reusable-template-fragments-include)
+  - [ModelAdmin attributes and methods](#modeladmin-attributes-and-methods)
 - [Questions and Answers](#questions-and-answers)
   - [Q: When I run `python3 manage.py migrate`, where do the default migrations come from? Where is that code written?](#q-when-i-run-python3-managepy-migrate-where-do-the-default-migrations-come-from-where-is-that-code-written)
   - [Q: What is a project and what is an app in Django?](#q-what-is-a-project-and-what-is-an-app-in-django)
@@ -393,6 +394,184 @@ If the route later moves (e.g. `app/` → `demo/`), only `urls.py` changes — e
 An included template inherits the full surrounding context by default. To override or pass extra variables explicitly: `{% include 'partials/header.html' with site_name="Custom Title" %}`.
 
 **Status in this project:** not yet adopted; `static/css/` (loaded via `{% load static %}` + `{% static %}`) is the equivalent pattern already in use for shared *assets* rather than shared *markup*.
+
+### ModelAdmin attributes and methods
+
+Common `admin.ModelAdmin` options, beyond what `GeneralInfoAdmin` (`app/admin.py`) already uses — `list_display`, `readonly_fields`, `has_add_permission`, `has_change_permission`, `has_delete_permission`.
+
+**Display — control the list page**
+
+**`list_display`** — columns shown in the admin list view; entries can be field names or method names. Used in `GeneralInfoAdmin`:
+```python
+list_display = ['company_name', 'location', 'email']
+```
+
+**`list_display_links`** — which of those columns link through to the edit page (defaults to the first column).
+```python
+list_display_links = ['company_name']
+```
+
+**`list_filter`** — adds a sidebar filter panel for the given fields.
+```python
+list_filter = ['location']
+```
+
+**`search_fields`** — enables a search box over the given fields.
+```python
+search_fields = ['company_name', 'email']
+```
+
+**`ordering`** — default sort order for the list view; a leading `-` means descending.
+```python
+ordering = ['-id']
+```
+
+**`list_per_page`** — how many rows are shown per page (default 100).
+```python
+list_per_page = 25
+```
+
+**`list_editable`** — fields editable directly inline in the list view, without opening the record.
+```python
+list_editable = ['location']
+```
+
+**`date_hierarchy`** — adds a date drill-down navigation bar; needs a `DateField`/`DateTimeField` on the model.
+```python
+date_hierarchy = 'created_at'
+```
+
+**Editing — control the add/change form**
+
+**`fields`** — which fields appear on the form, and in what order.
+```python
+fields = ['company_name', 'location', 'email']
+```
+
+**`exclude`** — fields to hide from the form entirely.
+```python
+exclude = ['internal_notes']
+```
+
+**`readonly_fields`** — fields shown on the form but not editable. Used in `GeneralInfoAdmin`:
+```python
+readonly_fields = ['email']
+```
+
+**`fieldsets`** — groups fields into labeled sections on the form.
+```python
+fieldsets = (
+    ('Company', {'fields': ('company_name', 'location')}),
+    ('Contact', {'fields': ('email',)}),
+)
+```
+
+**`prepopulated_fields`** — auto-fills a field (commonly a slug) from another field as you type.
+```python
+prepopulated_fields = {'slug': ('company_name',)}
+```
+
+**`autocomplete_fields`** — replaces a slow dropdown (e.g. a large foreign key) with a search-as-you-type widget.
+```python
+autocomplete_fields = ['owner']
+```
+
+**`raw_id_fields`** — replaces a foreign key/many-to-many dropdown with a plain ID input plus a lookup popup, useful when the related table is huge.
+```python
+raw_id_fields = ['owner']
+```
+
+**`inlines`** — lets you edit related (foreign-key child) records on the same page as the parent.
+```python
+class TaskInline(admin.TabularInline):
+    model = Task
+
+class ProjectAdmin(admin.ModelAdmin):
+    inlines = [TaskInline]
+```
+
+**Permissions — control which actions are allowed**
+
+Each returns a boolean. `GeneralInfoAdmin` uses the first three (all returning `False`) to fully lock the model down — no add, no edit, no delete — since it holds a single, pre-seeded row of site-wide info:
+
+**`has_add_permission(self, request)`**
+```python
+def has_add_permission(self, request):
+    return False
+```
+
+**`has_change_permission(self, request, obj=None)`**
+```python
+def has_change_permission(self, request, obj=None):
+    return False
+```
+
+**`has_delete_permission(self, request, obj=None)`**
+```python
+def has_delete_permission(self, request, obj=None):
+    return False
+```
+
+**`has_view_permission(self, request, obj=None)`** — controls whether the record can even be viewed, separate from editing it.
+```python
+def has_view_permission(self, request, obj=None):
+    return request.user.is_superuser
+```
+
+**`has_module_permission(self, request)`** — whether this model's section shows up in the admin index page at all.
+```python
+def has_module_permission(self, request):
+    return request.user.is_staff
+```
+
+**Actions — bulk operations**
+
+**`actions`** — list of custom bulk-action functions available in the list view's "Action" dropdown.
+```python
+def mark_verified(modeladmin, request, queryset):
+    queryset.update(verified=True)
+
+actions = [mark_verified]
+```
+
+**`actions_on_top` / `actions_on_bottom`** — where the actions dropdown is shown on the list page.
+```python
+actions_on_top = True
+actions_on_bottom = False
+```
+
+**Hooks — customize behavior in code**
+
+**`save_model(self, request, obj, form, change)`** — runs on save; a hook to set fields automatically (e.g. stamping who created a record).
+```python
+def save_model(self, request, obj, form, change):
+    if not change:
+        obj.created_by = request.user
+    super().save_model(request, obj, form, change)
+```
+
+**`get_queryset(self, request)`** — customize/filter which rows a given admin user sees at all.
+```python
+def get_queryset(self, request):
+    qs = super().get_queryset(request)
+    return qs if request.user.is_superuser else qs.filter(owner=request.user)
+```
+
+**`get_readonly_fields(self, request, obj=None)`** — same idea as `readonly_fields`, but computed dynamically per request/object.
+```python
+def get_readonly_fields(self, request, obj=None):
+    return ['email'] if obj else []
+```
+
+**`formfield_for_foreignkey(self, db_field, request, **kwargs)`** — customize how a specific foreign key field's widget/queryset behaves.
+```python
+def formfield_for_foreignkey(self, db_field, request, **kwargs):
+    if db_field.name == 'owner':
+        kwargs['queryset'] = User.objects.filter(is_staff=True)
+    return super().formfield_for_foreignkey(db_field, request, **kwargs)
+```
+
+Full reference: [Django `ModelAdmin` options](https://docs.djangoproject.com/en/stable/ref/contrib/admin/#modeladmin-options).
 
 ## Questions and Answers
 
