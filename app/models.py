@@ -12,4 +12,10 @@ class GeneralInfo(models.Model):
     instagram_url = models.URLField(blank=True, null=True)
     linkedin_url = models.URLField(blank=True, null=True)
 
+    def __str__(self):
+        return self.company_name
 
+    # To get custom table name
+    # class Meta:
+    #     db_table = "custom_table_name"
+    
