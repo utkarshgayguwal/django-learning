@@ -2,6 +2,23 @@
 
 This repository is my personal workspace for learning Django. It contains practice projects, apps, and notes as I work through Django concepts (models, views, templates, forms, admin, ORM, etc.) step by step.
 
+## Table of Contents
+
+- [Commonly Used Commands (Ubuntu)](#commonly-used-commands-ubuntu)
+  - [Virtual Environment](#virtual-environment)
+  - [Package Management (pip)](#package-management-pip)
+  - [Django Project and App Management](#django-project-and-app-management)
+- [Notes](#notes)
+  - [Two ways to serve templates (HTML files)](#two-ways-to-serve-templates-html-files)
+  - [Django Template Language (DTL) basics](#django-template-language-dtl-basics)
+  - [Template inheritance (extends and block)](#template-inheritance-extends-and-block)
+  - [Naming URLs and the url tag](#naming-urls-and-the-url-tag)
+  - [Reusable template fragments (include)](#reusable-template-fragments-include)
+- [Questions and Answers](#questions-and-answers)
+  - [Q: When I run `python3 manage.py migrate`, where do the default migrations come from? Where is that code written?](#q-when-i-run-python3-managepy-migrate-where-do-the-default-migrations-come-from-where-is-that-code-written)
+  - [Q: What is a project and what is an app in Django?](#q-what-is-a-project-and-what-is-an-app-in-django)
+  - [Q: What is MVT (Model-View-Template) in Django?](#q-what-is-mvt-model-view-template-in-django)
+
 ## Commonly Used Commands (Ubuntu)
 
 ### Virtual Environment
@@ -44,7 +61,7 @@ Install packages from a requirements file:
 python3 -m pip install -r requirements.txt
 ```
 
-### Django Project & App Management
+### Django Project and App Management
 
 Create a new Django project(add '.' at end to avoid further folder duplication):
 ```bash
@@ -136,7 +153,7 @@ Good for: things shared across the whole site — `base.html` layout, `navbar.ht
 
 **In practice:** most real Django projects use both together — project-level `templates/` for shared layout (`base.html`, `navbar.html`), and each app's `templates/<app_name>/` for that app's own pages, which `{% extends "base.html" %}`.
 
-### Django Template Language (DTL) — variables, filters, tags
+### Django Template Language (DTL) basics
 
 **Variables — `{{ variable_name }}`**
 
@@ -195,7 +212,7 @@ Used in `app/index.html` to render a task's status:
 
 Also supports `{% elif %}`, comparisons (`==`, `!=`, `<`, `in`), and boolean operators (`and`, `or`, `not`).
 
-### Template inheritance — `{% extends %}` + `{% block %}`
+### Template inheritance (extends and block)
 
 `home.html` and `app/index.html` currently each duplicate the full `<html><head>...` boilerplate. Inheritance removes that duplication.
 
@@ -232,7 +249,7 @@ Block names are arbitrary — `title`, `extra_head`, `content` above are project
 
 **Status in this project:** not yet adopted — `home.html` and `app/index.html` are still standalone, full-page templates.
 
-### Naming URLs and `{% url %}`
+### Naming URLs and the url tag
 
 `company/urls.py` currently has no `name=` on its routes:
 
@@ -263,7 +280,7 @@ If the route later moves (e.g. `app/` → `demo/`), only `urls.py` changes — e
 
 **Status in this project:** not yet adopted — no named routes or `{% url %}` usage yet.
 
-### Reusable template fragments — `{% include %}`
+### Reusable template fragments (include)
 
 `{% include %}` renders another template's output inline — for markup reused across multiple pages (header, navbar, footer) that isn't shared "page layout" the way `{% extends %}` is.
 
@@ -286,7 +303,7 @@ An included template inherits the full surrounding context by default. To overri
 
 **Status in this project:** not yet adopted; `static/css/` (loaded via `{% load static %}` + `{% static %}`) is the equivalent pattern already in use for shared *assets* rather than shared *markup*.
 
-## Q&A
+## Questions and Answers
 
 ### Q: When I run `python3 manage.py migrate`, where do the default migrations come from? Where is that code written?
 
