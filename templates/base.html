@@ -1,0 +1,13 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Django Learning{% endblock %}</title>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    {% include 'partials/navbar.html' %}
+    {% block content %}{% endblock %}
+</body>
+</html>

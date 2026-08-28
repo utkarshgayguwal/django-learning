@@ -1,19 +1,16 @@
+{% extends 'base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>{{ app_name }} Page</title>
-    <link rel="stylesheet" href="{%  static 'css/index.css' %}" type="text/css">
-</head>
-<body>
+
+{% block title %}{{ app_name }} Page{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{%  static 'css/index.css' %}" type="text/css">
+{% endblock %}
+
+{% block content %}
     <header>
         <h1>{{ app_name }} Page</h1>
         <p>{{ description }}</p>
-        <nav>
-            <a href="{% url 'home' %}">Home</a>
-            <a href="{% url 'app-index' %}">App</a>
-        </nav>
     </header>
 
     <div class="container">
@@ -32,5 +29,4 @@
 
         <p class="version">v{{ version }}</p>
     </div>
-</body>
-</html>
+{% endblock %}
