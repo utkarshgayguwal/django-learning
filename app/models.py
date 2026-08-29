@@ -72,12 +72,13 @@ class Author(models.Model):
     joined_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
-        return self.first_name
+        return f"{self.first_name} {self.last_name}"
+
 class Blog(models.Model):
     blog_image = models.CharField(max_length=255, blank=True, null=True)
     category = models.CharField(max_length=50, blank=True, null=True)
     title = models.CharField(max_length=255)
-    # author = models.CharField(max_length=255)
+    author = models.ForeignKey(Author, on_delete=models.CASCADE, related_name='blogs', blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now())
     content = models.TextField()
 

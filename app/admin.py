@@ -96,19 +96,6 @@ class ContactFormLogAdmin(admin.ModelAdmin):
     # disallow deleting GeneralInfo entries from the admin
     def has_delete_permission(self, request, obj=None):
         return False
-    
-@admin.register(Blog)
-class BlogAdmin(admin.ModelAdmin):
-    list_display = [
-        'title',
-        'category',
-        'blog_image',
-        'created_at'
-    ]
-
-    search_fields = [
-        'title'
-    ]
 
 @admin.register(Author)
 class AuthorAdmin(admin.ModelAdmin):
@@ -121,4 +108,17 @@ class AuthorAdmin(admin.ModelAdmin):
     search_fields = [
         'first_name',
         'last_name'
+    ]
+  
+@admin.register(Blog)
+class BlogAdmin(admin.ModelAdmin):
+    list_display = [
+        'title',
+        'category',
+        'blog_image',
+        'created_at'
+    ]
+
+    search_fields = [
+        'title'
     ]
