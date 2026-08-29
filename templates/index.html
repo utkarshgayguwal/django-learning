@@ -43,11 +43,19 @@
             <div class="testimonial-wrap">
               <div class="testimonial-item">
                 <div class="d-flex align-items-center">
+                  {% if 'http' in testimonial.user_image %}
+                  <img
+                    src="{{ testimonial.user_image }}"
+                    class="testimonial-img flex-shrink-0"
+                    alt=""
+                  />
+                  {% else %}
                   <img
                     src="{% static testimonial.user_image %}"
                     class="testimonial-img flex-shrink-0"
                     alt=""
                   />
+                  {% endif %}
                   <div>
                     <h3>{{ testimonial.username }}</h3>
                     <h4>{{ testimonial.user_job_title }}</h4>
