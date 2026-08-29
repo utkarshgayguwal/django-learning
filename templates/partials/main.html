@@ -39,6 +39,17 @@
 </head>
 
 <body>  
+ {% for message in messages %}
+    {% if message.tags == 'error' %}
+      <div style="margin-bottom:1px" class="alert alert-danger" role="alert">
+        {{ message }}
+      </div>
+    {% else %}
+      <div style="margin-bottom:1px" class="alert alert-success" role="alert">
+        {{ message }}
+      </div>
+    {% endif %}
+ {% endfor %}
  {% include 'partials/header.html' %}
 
   <!-- ======= Hero Section ======= -->

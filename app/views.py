@@ -1,6 +1,8 @@
 from django.shortcuts import render, redirect
 from django.core.mail import send_mail
 from django.conf import settings
+from django.template.loader import render_to_string
+from django.contrib import messages
 from app.models import (
     GeneralInfo,
     Service,
@@ -30,16 +32,27 @@ def contact_form(request):
         subject = request.POST.get('subject')
         message = request.POST.get('message')
 
-        print(f"name: {name}\nemail: {email}\nsubject: {subject}\nmessage: {message}")
-        
-        send_mail(
-            subject= subject,
-            message= f"{name} - {email} - {message}",
-            from_email=settings.EMAIL_HOST_USER,
-            recipient_list=[settings.EMAIL_HOST_USER],
-            fail_silently=False,
-        )
+        context = {
+            "name" : name,
+            "email" : email,
+            "subject" : subject,
+            "message" : message
+        }
 
-   
-    print("User has submitted contact form")
+        html_content = render_to_string('email.html', context)
+
+        try: 
+            send_mail(
+                subject= subject,
+                message= None,    
+                html_message= html_content,
+                from_email=settings.EMAIL_HOST_USER,
+                recipient_list=[settings.EMAIL_HOST_USER],
+                fail_silently=False,
+            )
+        except Exception as e:
+            messages.error(request, "There is an error, could not send email")
+        else:
+            messages.success(request, "Email has been sent")
+
     return redirect('home')
