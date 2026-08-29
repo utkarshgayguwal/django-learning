@@ -1,18 +1,19 @@
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from datetime import timedelta
-from app.models import GeneralInfo, Service, Testimonial, FrequentlyAskedQuestion, Blog
+from app.models import GeneralInfo, Service, Testimonial, FrequentlyAskedQuestion, Blog, Author
 
 
 class Command(BaseCommand):
-    help = "Seed the database with initial dummy data (GeneralInfo, Service, Testimonial, FrequentlyAskedQuestion, Blog entries)"
+    help = "Seed the database with initial dummy data (GeneralInfo, Service, Testimonial, FrequentlyAskedQuestion, Author, Blog entries)"
 
     def handle(self, *args, **options):
         general_info = self.seed_general_info()
         self.seed_services()
         self.seed_testimonials(general_info.company_name)
         self.seed_faqs(general_info.company_name)
-        self.seed_blogs()
+        authors = self.seed_authors()
+        self.seed_blogs(authors)
 
     def seed_general_info(self):
         general_info, created = GeneralInfo.objects.get_or_create(
@@ -253,7 +254,61 @@ class Command(BaseCommand):
             )
         )
 
-    def seed_blogs(self):
+    def seed_authors(self):
+        now = timezone.now()
+        authors = [
+            {
+                "first_name": "Jane",
+                "last_name": "Cooper",
+                "country": "United States",
+                "joined_at": now - timedelta(days=365 * 3),
+            },
+            {
+                "first_name": "Marcus",
+                "last_name": "Reed",
+                "country": "United Kingdom",
+                "joined_at": now - timedelta(days=365 * 2),
+            },
+            {
+                "first_name": "Elena",
+                "last_name": "Petrova",
+                "country": "Ukraine",
+                "joined_at": now - timedelta(days=365),
+            },
+            {
+                "first_name": "Kenji",
+                "last_name": "Watanabe",
+                "country": "Japan",
+                "joined_at": now - timedelta(days=200),
+            },
+            {
+                "first_name": "Amara",
+                "last_name": "Okafor",
+                "country": "Nigeria",
+                "joined_at": now - timedelta(days=90),
+            },
+        ]
+
+        created_count = 0
+        author_objs = []
+        for data in authors:
+            author, created = Author.objects.get_or_create(
+                first_name=data["first_name"],
+                last_name=data["last_name"],
+                defaults=data,
+            )
+            author_objs.append(author)
+            created_count += created
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Seeding complete: {created_count} Author row(s) created, "
+                f"{len(authors) - created_count} already existed."
+            )
+        )
+        return author_objs
+
+    def seed_blogs(self, authors):
         now = timezone.now()
         blog_images = [f"assets/img/blog/blog-{n}.jpg" for n in range(1, 7)]
 
@@ -354,6 +409,7 @@ class Command(BaseCommand):
         created_count = 0
         for index, data in enumerate(blogs):
             data["blog_image"] = blog_images[index % len(blog_images)]
+            data["author"] = authors[index % len(authors)]
             # spread posts across the last 10 days, oldest first, so the
             # last entries are the most recently created
             data["created_at"] = now - timedelta(days=len(blogs) - index)
