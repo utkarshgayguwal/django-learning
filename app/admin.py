@@ -1,5 +1,6 @@
 from django.contrib import admin
 from app.models import GeneralInfo
+from app.models import Service
 
 @admin.register(GeneralInfo)
 class GeneralInfoAdmin(admin.ModelAdmin):
@@ -12,7 +13,7 @@ class GeneralInfoAdmin(admin.ModelAdmin):
 
     list_display_links = ['company_name']
 
-    list_filter = ['location', 'phone']
+    # list_filter = ['location', 'phone']
 
     search_fields = ['company_name']
 
@@ -32,3 +33,14 @@ class GeneralInfoAdmin(admin.ModelAdmin):
     # def has_delete_permission(self, request, obj=None):
     #     return False
 
+@admin.register(Service)
+class ServiceAdmin(admin.ModelAdmin):
+    list_display = [
+        'title',
+        'description'
+    ]
+
+    search_fields = [
+        'title',
+        'description'
+    ]
