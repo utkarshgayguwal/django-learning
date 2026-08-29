@@ -1,15 +1,18 @@
 from django.core.management.base import BaseCommand
-from app.models import GeneralInfo, Service, Testimonial, FrequentlyAskedQuestion
+from django.utils import timezone
+from datetime import timedelta
+from app.models import GeneralInfo, Service, Testimonial, FrequentlyAskedQuestion, Blog
 
 
 class Command(BaseCommand):
-    help = "Seed the database with initial dummy data (GeneralInfo, Service, Testimonial, FrequentlyAskedQuestion entries)"
+    help = "Seed the database with initial dummy data (GeneralInfo, Service, Testimonial, FrequentlyAskedQuestion, Blog entries)"
 
     def handle(self, *args, **options):
         general_info = self.seed_general_info()
         self.seed_services()
         self.seed_testimonials(general_info.company_name)
         self.seed_faqs(general_info.company_name)
+        self.seed_blogs()
 
     def seed_general_info(self):
         general_info, created = GeneralInfo.objects.get_or_create(
@@ -247,5 +250,121 @@ class Command(BaseCommand):
             self.style.SUCCESS(
                 f"Seeding complete: {created_count} FrequentlyAskedQuestion row(s) "
                 f"created, {len(faqs) - created_count} already existed."
+            )
+        )
+
+    def seed_blogs(self):
+        now = timezone.now()
+        blog_images = [f"assets/img/blog/blog-{n}.jpg" for n in range(1, 7)]
+
+        blogs = [
+            {
+                "title": "10 Digital Marketing Trends to Watch This Year",
+                "category": "Marketing",
+                "content": (
+                    "From AI-driven personalization to short-form video, the "
+                    "digital marketing landscape keeps shifting. Here's a look "
+                    "at the trends shaping how brands reach their audiences."
+                ),
+            },
+            {
+                "title": "Why Your Business Needs a Content Strategy",
+                "category": "Content",
+                "content": (
+                    "Publishing without a plan wastes effort. A clear content "
+                    "strategy aligns what you write with what your audience "
+                    "actually wants to read, and what moves the business "
+                    "forward."
+                ),
+            },
+            {
+                "title": "The Art of Building Brand Identity",
+                "category": "Branding",
+                "content": (
+                    "A strong brand identity is more than a logo. It's the "
+                    "consistent voice, visuals, and values that make a "
+                    "company instantly recognizable."
+                ),
+            },
+            {
+                "title": "SEO Basics Every Small Business Should Know",
+                "category": "SEO",
+                "content": (
+                    "Search engine optimization doesn't have to be "
+                    "overwhelming. These fundamentals will help your site "
+                    "rank without needing a full-time specialist."
+                ),
+            },
+            {
+                "title": "How to Measure Marketing ROI That Actually Matters",
+                "category": "Analytics",
+                "content": (
+                    "Vanity metrics look good in a slide deck but rarely "
+                    "explain business impact. Here's how to track the "
+                    "numbers that tie back to revenue."
+                ),
+            },
+            {
+                "title": "Social Media Strategies for Small Businesses",
+                "category": "Social Media",
+                "content": (
+                    "You don't need a huge budget to build a presence on "
+                    "social media. Consistency and a clear voice go further "
+                    "than paid reach alone."
+                ),
+            },
+            {
+                "title": "Email Marketing Is Not Dead: Here's Proof",
+                "category": "Marketing",
+                "content": (
+                    "Despite predictions of its demise, email remains one of "
+                    "the highest-ROI marketing channels. The key is "
+                    "segmentation and timing, not volume."
+                ),
+            },
+            {
+                "title": "Design Principles That Improve Conversion Rates",
+                "category": "Design",
+                "content": (
+                    "Good design isn't just about looking polished. Layout, "
+                    "contrast, and clear calls to action all directly "
+                    "influence whether visitors convert."
+                ),
+            },
+            {
+                "title": "Building Customer Trust Through Transparency",
+                "category": "Branding",
+                "content": (
+                    "Customers reward companies that are upfront about "
+                    "pricing, sourcing, and mistakes. Transparency builds "
+                    "trust that outlasts any single campaign."
+                ),
+            },
+            {
+                "title": "A Beginner's Guide to Web Development Wizardry",
+                "category": "Web Development",
+                "content": (
+                    "Whether you're commissioning a website or building your "
+                    "own, understanding the basics of front-end and back-end "
+                    "development helps you make better decisions."
+                ),
+            },
+        ]
+
+        created_count = 0
+        for index, data in enumerate(blogs):
+            data["blog_image"] = blog_images[index % len(blog_images)]
+            # spread posts across the last 10 days, oldest first, so the
+            # last entries are the most recently created
+            data["created_at"] = now - timedelta(days=len(blogs) - index)
+            _, created = Blog.objects.get_or_create(
+                title=data["title"], defaults=data
+            )
+            created_count += created
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Seeding complete: {created_count} Blog row(s) created, "
+                f"{len(blogs) - created_count} already existed."
             )
         )
