@@ -1,8 +1,12 @@
 from django.contrib import admin
-from app.models import GeneralInfo
-from app.models import Service
-from app.models import Testimonial
-from app.models import FrequentlyAskedQuestion
+from app.models import (
+    GeneralInfo,
+    Service,
+    Testimonial,
+    FrequentlyAskedQuestion,
+    ContactFormLog
+)
+
 
 @admin.register(GeneralInfo)
 class GeneralInfoAdmin(admin.ModelAdmin):
@@ -69,3 +73,24 @@ class FrequentlyAskedQuestionAdmin(admin.ModelAdmin):
     search_fields = [
         'question'
     ]
+
+@admin.register(ContactFormLog)
+class ContactFormLogAdmin(admin.ModelAdmin):
+    list_display = [
+        'email',
+        'is_success',
+        'is_error',
+        'action_time'
+    ]
+
+    # disallow adding new GeneralInfo entries from the admin
+    def has_add_permission(self, request):
+        return False
+
+    # disallow editing existing GeneralInfo entries from the admin
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    # disallow deleting GeneralInfo entries from the admin
+    def has_delete_permission(self, request, obj=None):
+        return False
