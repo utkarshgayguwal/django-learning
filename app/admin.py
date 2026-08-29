@@ -1,6 +1,7 @@
 from django.contrib import admin
 from app.models import GeneralInfo
 from app.models import Service
+from app.models import Testimonial
 
 @admin.register(GeneralInfo)
 class GeneralInfoAdmin(admin.ModelAdmin):
@@ -44,3 +45,16 @@ class ServiceAdmin(admin.ModelAdmin):
         'title',
         'description'
     ]
+
+@admin.register(Testimonial)
+class TestimonialAdmin(admin.ModelAdmin):
+    list_display = [
+        'username', 
+        'user_job_title',
+        'display_rating_count'
+    ]
+
+    def display_rating_count(self, obj):
+        return '*' * obj.rating_count
+    
+    display_rating_count.short_description = "Rating"
