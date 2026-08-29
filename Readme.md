@@ -17,6 +17,7 @@ This repository is my personal workspace for learning Django. It contains practi
   - [Reusable template fragments (include)](#reusable-template-fragments-include)
   - [ModelAdmin attributes and methods](#modeladmin-attributes-and-methods)
   - [Commonly used ORM methods](#commonly-used-orm-methods)
+  - [Foreign keys and relationships (ForeignKey, OneToOne, ManyToMany)](#foreign-keys-and-relationships-foreignkey-onetoone-manytomany)
 - [Questions and Answers](#questions-and-answers)
   - [Q: When I run `python3 manage.py migrate`, where do the default migrations come from? Where is that code written?](#q-when-i-run-python3-managepy-migrate-where-do-the-default-migrations-come-from-where-is-that-code-written)
   - [Q: What is a project and what is an app in Django?](#q-what-is-a-project-and-what-is-an-app-in-django)
@@ -757,6 +758,97 @@ Author.objects.prefetch_related("book_set").all()
 **Mental model:** `filter`/`exclude`/`order_by`/`values` return **QuerySets** — lazy and chainable, not hitting the DB until evaluated. `get`/`first`/`create`/`count`/`exists`/`aggregate` hit the DB **immediately** and return a concrete result. Chains collapse into a single SQL query, e.g. `Book.objects.filter(in_stock=True).exclude(price__lt=100).order_by("-price")[:5]`.
 
 Full reference: [Django QuerySet API](https://docs.djangoproject.com/en/stable/ref/models/querysets/).
+
+### Foreign keys and relationships (ForeignKey, OneToOne, ManyToMany)
+
+Django gives three field types for linking models: `ForeignKey`, `OneToOneField`, and `ManyToManyField`.
+
+**1. Foreign Key (One-to-Many)**
+
+A foreign key is a column on the "child" table storing the primary key of a row on the "parent" table — **one parent row can be referenced by many child rows.**
+
+This project's `app/models.py` has an `Author` model and a `Blog` model with a commented-out `author` field:
+
+```python
+class Blog(models.Model):
+    ...
+    # author = models.CharField(max_length=255)
+```
+
+That stored the author as plain text with no real link to the `Author` table. The correct fix is a `ForeignKey`:
+
+```python
+class Blog(models.Model):
+    ...
+    author = models.ForeignKey(
+        Author,
+        on_delete=models.CASCADE,
+        related_name='blogs'
+    )
+```
+
+- **One `Author` → many `Blog` posts.** Each `Blog` row stores an `author_id` column.
+- `on_delete` is required — what happens to `Blog` rows if their `Author` is deleted:
+  - `CASCADE` — delete the blogs too.
+  - `PROTECT` — block deletion of the author if they have blogs.
+  - `SET_NULL` — set `author` to `NULL` (requires `null=True` on the field).
+  - `SET_DEFAULT` — fall back to a default author.
+- `related_name='blogs'` enables backward access: `some_author.blogs.all()`. Without it, Django defaults to `blog_set`.
+- Forward access is a plain attribute: `some_blog.author` returns the `Author` instance (not just an ID).
+
+**2. One-to-One**
+
+A `OneToOneField` is a foreign key with a `UNIQUE` constraint added — **each parent row links to at most one child row**, and vice versa.
+
+Classic use case: splitting off optional/rarely-used data into a second table, e.g. an `AuthorProfile`:
+
+```python
+class AuthorProfile(models.Model):
+    author = models.OneToOneField(
+        Author,
+        on_delete=models.CASCADE,
+        related_name='profile'
+    )
+    bio = models.TextField()
+    avatar = models.CharField(max_length=255)
+```
+
+- Each `Author` has exactly one `AuthorProfile` (or none).
+- Forward: `profile.author`. Backward: `some_author.profile` (singular — not `.profile_set`, since it's guaranteed unique).
+
+**3. Many-to-Many**
+
+A `ManyToManyField` lets **many rows on each side relate to many rows on the other side**. Django creates a hidden junction table with two foreign keys — neither model itself gets an FK column.
+
+```python
+class Tag(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+
+class Blog(models.Model):
+    ...
+    tags = models.ManyToManyField(Tag, related_name='blogs', blank=True)
+```
+
+- No `on_delete` argument — deleting a `Tag` only removes the junction-table rows linking it, not the `Blog`s.
+- Access: `some_blog.tags.all()` and `some_tag.blogs.all()`.
+- Modify with `.add()`, `.remove()`, `.set()`: `some_blog.tags.add(tag1, tag2)`.
+- Need extra data on the relationship itself (e.g. "date tagged")? Use a `through` model instead of a plain `ManyToManyField`.
+
+**Quick comparison**
+
+| Relationship | Field | DB implementation | Example |
+|---|---|---|---|
+| One-to-Many | `ForeignKey` | FK column on the "many" side | `Author` → many `Blog`s |
+| One-to-One | `OneToOneField` | FK column with `UNIQUE` constraint | `Author` ↔ `AuthorProfile` |
+| Many-to-Many | `ManyToManyField` | separate junction table | `Blog` ↔ `Tag` |
+
+**Practical notes**
+
+- If a model is defined later in the file than the one it references, use a string instead of the class object to avoid ordering issues: `models.ForeignKey("Author", ...)`.
+- Adding any of these fields requires `python manage.py makemigrations` + `migrate`, same as the existing `0007`–`0009` migrations for `Blog`/`Author`.
+- Adding a required (`null=False`) `ForeignKey` to a model that already has rows prompts Django's migration for a one-off default value.
+
+**Status in this project:** not yet adopted — `Blog.author` is currently commented out as a plain `CharField`; converting it to a real `ForeignKey` to `Author` is the natural next step.
 
 ## Questions and Answers
 
