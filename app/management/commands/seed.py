@@ -109,6 +109,42 @@ class Command(BaseCommand):
                     "increased leads and revenue. Highly recommended."
                 ),
             },
+            {
+                "user_image": "assets/img/testimonials/testimonials-2.jpg",
+                "username": "Sarah Johnson",
+                "user_job_title": "Marketing Director",
+                "rating_count": 5,
+                "review": (
+                    "[Your Agency Name] completely transformed how we approach "
+                    "marketing. Their data-driven strategies and clear reporting "
+                    "gave us the confidence to scale campaigns we'd been "
+                    "hesitant to try before. The results speak for themselves."
+                ),
+            },
+            {
+                "user_image": "assets/img/testimonials/testimonials-3.jpg",
+                "username": "Michael Chen",
+                "user_job_title": "Product Manager",
+                "rating_count": 4,
+                "review": (
+                    "Professional, responsive, and genuinely invested in our "
+                    "success. [Your Agency Name] took the time to understand our "
+                    "product before proposing solutions, which made all the "
+                    "difference in how well the final work fit our needs."
+                ),
+            },
+            {
+                "user_image": "assets/img/testimonials/testimonials-5.jpg",
+                "username": "Emily Rodriguez",
+                "user_job_title": "Small Business Owner",
+                "rating_count": 5,
+                "review": (
+                    "As a small business, we needed a partner who could work "
+                    "within our budget without cutting corners. [Your Agency "
+                    "Name] delivered exactly that, and our online presence has "
+                    "never looked better."
+                ),
+            },
         ]
 
         created_count = 0
