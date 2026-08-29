@@ -4,7 +4,8 @@ from app.models import (
     Service,
     Testimonial,
     FrequentlyAskedQuestion,
-    ContactFormLog
+    ContactFormLog,
+    Blog
 )
 
 
@@ -94,3 +95,17 @@ class ContactFormLogAdmin(admin.ModelAdmin):
     # disallow deleting GeneralInfo entries from the admin
     def has_delete_permission(self, request, obj=None):
         return False
+    
+@admin.register(Blog)
+class BlogAdmin(admin.ModelAdmin):
+    list_display = [
+        'title',
+        'author',
+        'category',
+        'blog_image',
+        'created_at'
+    ]
+
+    search_fields = [
+        'title'
+    ]
