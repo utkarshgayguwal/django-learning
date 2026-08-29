@@ -1,14 +1,15 @@
 from django.core.management.base import BaseCommand
-from app.models import GeneralInfo, Service, Testimonial
+from app.models import GeneralInfo, Service, Testimonial, FrequentlyAskedQuestion
 
 
 class Command(BaseCommand):
-    help = "Seed the database with initial dummy data (GeneralInfo, Service, Testimonial entries)"
+    help = "Seed the database with initial dummy data (GeneralInfo, Service, Testimonial, FrequentlyAskedQuestion entries)"
 
     def handle(self, *args, **options):
         general_info = self.seed_general_info()
         self.seed_services()
         self.seed_testimonials(general_info.company_name)
+        self.seed_faqs(general_info.company_name)
 
     def seed_general_info(self):
         general_info, created = GeneralInfo.objects.get_or_create(
@@ -181,5 +182,70 @@ class Command(BaseCommand):
             self.style.SUCCESS(
                 f"Seeding complete: {created_count} Testimonial row(s) created, "
                 f"{len(testimonials) - created_count} already existed."
+            )
+        )
+
+    def seed_faqs(self, company_name):
+        faqs = [
+            {
+                "question": "What services does your agency provide?",
+                "answer": (
+                    "Our agency offers a range of services, including [brief "
+                    "description of services]. Whether you need [specific service] "
+                    "or [another service], we have the expertise to meet your "
+                    "needs."
+                ),
+            },
+            {
+                "question": "How can I contact your agency for assistance?",
+                "answer": (
+                    "You can reach us through our Contact Us page on the website, "
+                    "where you'll find our phone number and email address. "
+                    "Additionally, we welcome you to visit our office during "
+                    "business hours for face-to-face assistance."
+                ),
+            },
+            {
+                "question": "What sets your agency apart from others in the industry?",
+                "answer": (
+                    f"At {company_name}, we pride ourselves on [highlight unique "
+                    "aspects such as expertise, customer service, or innovative "
+                    "solutions]. Our commitment to [core values] distinguishes us, "
+                    "ensuring that we deliver exceptional results for our clients."
+                ),
+            },
+            {
+                "question": "How does the billing process work?",
+                "answer": (
+                    "Our billing process is straightforward. Once we've provided "
+                    "you with a detailed proposal and you've accepted it, we will "
+                    "send you an invoice for the agreed-upon services. Our billing "
+                    "terms are [mention payment terms], and we accept payments "
+                    "through [list payment methods]."
+                ),
+            },
+            {
+                "question": "Can I see examples of your agency's previous work?",
+                "answer": (
+                    "Absolutely! We showcase a portfolio of our work on our "
+                    "website under the \"Projects\" or \"Portfolio\" section. "
+                    "There, you can explore a variety of projects we've "
+                    "successfully completed, giving you a sense of the quality "
+                    "and diversity of our work."
+                ),
+            },
+        ]
+
+        created_count = 0
+        for data in faqs:
+            _, created = FrequentlyAskedQuestion.objects.get_or_create(
+                question=data["question"], defaults=data
+            )
+            created_count += created
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Seeding complete: {created_count} FrequentlyAskedQuestion row(s) "
+                f"created, {len(faqs) - created_count} already existed."
             )
         )
