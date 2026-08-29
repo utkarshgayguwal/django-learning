@@ -16,6 +16,7 @@ This repository is my personal workspace for learning Django. It contains practi
   - [Naming URLs and the url tag](#naming-urls-and-the-url-tag)
   - [Reusable template fragments (include)](#reusable-template-fragments-include)
   - [ModelAdmin attributes and methods](#modeladmin-attributes-and-methods)
+  - [Commonly used ORM methods](#commonly-used-orm-methods)
 - [Questions and Answers](#questions-and-answers)
   - [Q: When I run `python3 manage.py migrate`, where do the default migrations come from? Where is that code written?](#q-when-i-run-python3-managepy-migrate-where-do-the-default-migrations-come-from-where-is-that-code-written)
   - [Q: What is a project and what is an app in Django?](#q-what-is-a-project-and-what-is-an-app-in-django)
@@ -572,6 +573,190 @@ def formfield_for_foreignkey(self, db_field, request, **kwargs):
 ```
 
 Full reference: [Django `ModelAdmin` options](https://docs.djangoproject.com/en/stable/ref/contrib/admin/#modeladmin-options).
+
+### Commonly used ORM methods
+
+The most-used `QuerySet`/`Manager` methods, grouped by purpose. Examples use a simple two-model set (this project's own `GeneralInfo` model, `app/models.py`, has no relations, so a relational example is used here instead):
+
+```python
+class Author(models.Model):
+    name = models.CharField(max_length=100)
+
+class Book(models.Model):
+    title = models.CharField(max_length=200)
+    author = models.ForeignKey(Author, on_delete=models.CASCADE)
+    price = models.DecimalField(max_digits=6, decimal_places=2)
+    published = models.DateField()
+    in_stock = models.BooleanField(default=True)
+```
+
+**Retrieving objects**
+
+**`all()`** — returns a QuerySet of every row.
+```python
+Book.objects.all()
+```
+
+**`get()`** — returns exactly one object; raises `DoesNotExist` if none, `MultipleObjectsReturned` if more than one. Use for lookups by a unique field (like `pk`).
+```python
+Book.objects.get(pk=1)
+```
+
+**`filter()`** — returns a QuerySet matching the given conditions (can be empty).
+```python
+Book.objects.filter(in_stock=True)
+```
+
+**`exclude()`** — opposite of `filter()`; returns everything that does *not* match.
+```python
+Book.objects.exclude(in_stock=True)
+```
+
+**`first()` / `last()`** — returns the first/last object or `None`, no exception raised.
+```python
+Book.objects.filter(author__name="Utkarsh").first()
+```
+
+**Field lookups** (used inside `filter()`/`exclude()`)
+
+Django uses `field__lookuptype=value` syntax:
+```python
+Book.objects.filter(price__gt=500)              # greater than
+Book.objects.filter(price__gte=500)             # greater than or equal
+Book.objects.filter(price__lt=500)
+Book.objects.filter(price__lte=500)
+Book.objects.filter(title__icontains="django")  # case-insensitive contains
+Book.objects.filter(title__startswith="The")
+Book.objects.filter(published__year=2024)
+Book.objects.filter(author__name__exact="Utkarsh")  # traverse relations with __
+Book.objects.filter(id__in=[1, 2, 3])
+Book.objects.filter(published__isnull=True)
+```
+
+**Ordering, limiting, uniqueness**
+
+**`order_by()`** — sort results (`-` prefix = descending).
+```python
+Book.objects.order_by("-published", "title")
+```
+
+**Slicing** — acts like Python list slicing → `LIMIT`/`OFFSET` in SQL.
+```python
+Book.objects.all()[:5]    # first 5
+Book.objects.all()[5:10]  # next 5
+```
+
+**`distinct()`** — removes duplicate rows (common after joins).
+```python
+Book.objects.filter(author__name="Utkarsh").distinct()
+```
+
+**`values()` / `values_list()`** — return dicts/tuples instead of model instances; useful for lighter queries.
+```python
+Book.objects.values("title", "price")          # [{'title': ..., 'price': ...}, ...]
+Book.objects.values_list("title", flat=True)   # ['Book 1', 'Book 2', ...]
+```
+
+**Creating, updating, deleting**
+
+**`create()`** — build and save in one step.
+```python
+Book.objects.create(title="Deep ORM", author=a1, price=499, published="2026-01-01")
+```
+
+**`save()`** — persists changes on an instance (insert or update).
+```python
+book = Book.objects.get(pk=1)
+book.price = 599
+book.save()
+```
+
+**`bulk_create()`** — insert many rows in a single query (faster than looping `.save()`).
+```python
+Book.objects.bulk_create([Book(title="A", ...), Book(title="B", ...)])
+```
+
+**`update()`** — updates matching rows directly in the DB without loading instances (no `save()`/signals triggered per row).
+```python
+Book.objects.filter(in_stock=False).update(price=0)
+```
+
+**`delete()`** — deletes matching objects.
+```python
+Book.objects.filter(in_stock=False).delete()
+```
+
+**`get_or_create()`** — fetch if it exists, otherwise create it. Returns `(object, created_bool)`.
+```python
+author, created = Author.objects.get_or_create(name="Utkarsh")
+```
+
+**`update_or_create()`** — like `get_or_create()`, but also updates fields if the object already exists.
+```python
+Book.objects.update_or_create(title="Deep ORM", defaults={"price": 599})
+```
+
+**Aggregation & annotation**
+
+**`aggregate()`** — computes a single summary value across the whole QuerySet (returns a dict).
+```python
+from django.db.models import Avg
+Book.objects.aggregate(Avg("price"))  # {'price__avg': 432.5}
+```
+
+**`annotate()`** — adds a computed value to *each* object in the QuerySet (group-by style queries).
+```python
+from django.db.models import Count
+for author in Author.objects.annotate(book_count=Count("book")):
+    print(author.name, author.book_count)
+```
+
+**`count()`** — number of rows matched; runs `COUNT()` in SQL without loading objects (more efficient than `len(qs)`).
+```python
+Book.objects.filter(in_stock=True).count()
+```
+
+**`exists()`** — returns `True`/`False`; more efficient than `.count() > 0` for a simple existence check.
+```python
+Book.objects.filter(author=a1).exists()
+```
+
+**Complex lookups**
+
+**`Q()` objects** — for OR conditions or complex combinations (`filter()` alone only ANDs).
+```python
+from django.db.models import Q
+Book.objects.filter(Q(price__lt=100) | Q(in_stock=False))
+Book.objects.filter(Q(title__icontains="orm") & ~Q(in_stock=True))
+```
+
+**`F()` objects** — reference another field's value in a query (compare fields, or do arithmetic at the DB level without pulling data into Python).
+```python
+from django.db.models import F
+Book.objects.filter(price__gt=F("author__id"))
+Book.objects.update(price=F("price") * 1.1)  # 10% price hike, done in the DB
+```
+
+**Relations (FK / reverse FK)**
+
+```python
+book.author             # forward FK access
+author.book_set.all()   # reverse FK access (default related manager)
+```
+
+**`select_related()`** — for FK/OneToOne; does a SQL JOIN to fetch related objects in the same query (avoids N+1 queries).
+```python
+Book.objects.select_related("author").all()
+```
+
+**`prefetch_related()`** — for ManyToMany/reverse-FK; runs a separate query and joins in Python (also avoids N+1).
+```python
+Author.objects.prefetch_related("book_set").all()
+```
+
+**Mental model:** `filter`/`exclude`/`order_by`/`values` return **QuerySets** — lazy and chainable, not hitting the DB until evaluated. `get`/`first`/`create`/`count`/`exists`/`aggregate` hit the DB **immediately** and return a concrete result. Chains collapse into a single SQL query, e.g. `Book.objects.filter(in_stock=True).exclude(price__lt=100).order_by("-price")[:5]`.
+
+Full reference: [Django QuerySet API](https://docs.djangoproject.com/en/stable/ref/models/querysets/).
 
 ## Questions and Answers
 
