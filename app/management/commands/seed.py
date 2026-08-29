@@ -1,11 +1,15 @@
 from django.core.management.base import BaseCommand
-from app.models import Service
+from app.models import Service, Testimonial
 
 
 class Command(BaseCommand):
-    help = "Seed the database with initial dummy data (Service entries)"
+    help = "Seed the database with initial dummy data (Service, Testimonial entries)"
 
     def handle(self, *args, **options):
+        self.seed_services()
+        self.seed_testimonials()
+
+    def seed_services(self):
         services = [
             {
                 "icon": "bi bi-activity",
@@ -76,5 +80,47 @@ class Command(BaseCommand):
             self.style.SUCCESS(
                 f"Seeding complete: {created_count} Service row(s) created, "
                 f"{len(services) - created_count} already existed."
+            )
+        )
+
+    def seed_testimonials(self):
+        testimonials = [
+            {
+                "user_image": "assets/img/testimonials/testimonials-1.jpg",
+                "username": "Saul Goodman",
+                "user_job_title": "Ceo & Founder",
+                "rating_count": 5,
+                "review": (
+                    "Working with [Your Agency Name] was a game-changer for our "
+                    "business. Their team's strategic approach and attention to "
+                    "detail significantly boosted our online presence. They're not "
+                    "just an agency; they're a partner dedicated to our success."
+                ),
+            },
+            {
+                "user_image": "assets/img/testimonials/testimonials-4.jpg",
+                "username": "Adam",
+                "user_job_title": "Designer",
+                "rating_count": 5,
+                "review": (
+                    "Incredible results, exceptional service! [Your Agency Name] "
+                    "delivered beyond our expectations. Their creativity and "
+                    "expertise transformed our marketing strategy, resulting in "
+                    "increased leads and revenue. Highly recommended."
+                ),
+            },
+        ]
+
+        created_count = 0
+        for data in testimonials:
+            _, created = Testimonial.objects.get_or_create(
+                username=data["username"], defaults=data
+            )
+            created_count += created
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Seeding complete: {created_count} Testimonial row(s) created, "
+                f"{len(testimonials) - created_count} already existed."
             )
         )
