@@ -5,7 +5,8 @@ from app.models import (
     Testimonial,
     FrequentlyAskedQuestion,
     ContactFormLog,
-    Blog
+    Blog,
+    Author
 )
 
 
@@ -100,7 +101,6 @@ class ContactFormLogAdmin(admin.ModelAdmin):
 class BlogAdmin(admin.ModelAdmin):
     list_display = [
         'title',
-        'author',
         'category',
         'blog_image',
         'created_at'
@@ -108,4 +108,17 @@ class BlogAdmin(admin.ModelAdmin):
 
     search_fields = [
         'title'
+    ]
+
+@admin.register(Author)
+class AuthorAdmin(admin.ModelAdmin):
+    list_display = [
+        'first_name',
+        'last_name',
+        'joined_at'
+    ]
+
+    search_fields = [
+        'first_name',
+        'last_name'
     ]
