@@ -9,7 +9,8 @@ from app.models import (
     Service,
     Testimonial,
     FrequentlyAskedQuestion,
-    ContactFormLog
+    ContactFormLog,
+    Blog
 )
 
 
@@ -18,11 +19,13 @@ def index(request):
     services = Service.objects.all()
     testimonials = Testimonial.objects.all()
     faqs = FrequentlyAskedQuestion.objects.all()
+    recent_blogs = Blog.objects.all().order_by('-created_at')[:3]
     context = {
         "general_info": general_info,
         "services": services,
         "testimonials": testimonials,
         "faqs": faqs,
+        "recent_blogs": recent_blogs,
     }
     return render(request, "index.html", context)
 

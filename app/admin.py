@@ -114,6 +114,7 @@ class AuthorAdmin(admin.ModelAdmin):
 class BlogAdmin(admin.ModelAdmin):
     list_display = [
         'title',
+        'author',
         'category',
         'blog_image',
         'created_at'
