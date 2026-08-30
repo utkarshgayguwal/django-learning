@@ -54,7 +54,7 @@
               <div class="meta-top">
                 <ul>
                   <li class="d-flex align-items-center"><i class="bi bi-person"></i> <a href="blog-details.html">{{ blog.author.first_name }} {{ blog.author.last_name }}</a></li>
-                  <li class="d-flex align-items-center"><i class="bi bi-clock"></i> <a href="blog-details.html"><time datetime="2020-01-01">{{ blog.created_at }}</time></a></li>
+                  <li class="d-flex align-items-center"><i class="bi bi-clock"></i> <a href="blog-details.html"><time datetime="2020-01-01">{{ blog.created_at|date:"M j, Y" }}</time></a></li>
                 </ul>
               </div><!-- End meta top -->
 
@@ -112,4 +112,4 @@
       </div>
     </section><!-- End Blog Details Section -->
 
- {% endblock %}
+ {% endblock mainContent %}
