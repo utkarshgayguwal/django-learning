@@ -4,6 +4,7 @@ from django.conf import settings
 from django.template.loader import render_to_string
 from django.contrib import messages
 from django.utils import timezone
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from app.models import (
     GeneralInfo,
     Service,
@@ -91,10 +92,25 @@ def blog_details(request, blog_id):
     return render(request, 'blog_details.html', context)
 
 def blogs(request):
-    all_blogs = Blog.objects.all().order_by('-created_at')[:6]
+    all_blogs = Blog.objects.all().order_by('-created_at')
+    blogs_per_page = 3
+    paginator = Paginator(all_blogs, blogs_per_page)
+
+    print(f"paginator.num_pages: {paginator.num_pages}")
+
+    page = request.GET.get('page')
+
+    print(f"page: {page}")
+
+    try:
+        blogs = paginator.page(page)
+    except PageNotAnInteger:
+        blogs = paginator.page(1)
+    except EmptyPage:
+        blogs = paginator.page(paginator.num_pages)
 
     context = {
-        "all_blogs": all_blogs,
+        "blogs": blogs,
     }
 
     return render(request, 'blogs.html', context)
