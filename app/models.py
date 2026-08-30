@@ -80,7 +80,7 @@ class Blog(models.Model):
     category = models.CharField(max_length=50, blank=True, null=True)
     title = models.CharField(max_length=255)
     author = models.ForeignKey(Author, on_delete=models.CASCADE, related_name='blogs', blank=True, null=True)
-    created_at = models.DateTimeField(default=timezone.now())
+    created_at = models.DateTimeField(default=timezone.now)
     content = RichTextField()
 
     def __str__(self):
