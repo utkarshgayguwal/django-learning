@@ -102,6 +102,11 @@ Open the Django interactive shell:
 python manage.py shell
 ```
 
+Collect all static files into `STATIC_ROOT` (needed for deployment, e.g. when serving via WhiteNoise):
+```bash
+python3 manage.py collectstatic
+```
+
 ## Notes
 
 ### MVT (Model-View-Template)
