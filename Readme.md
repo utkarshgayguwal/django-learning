@@ -21,6 +21,7 @@ This repository is my personal workspace for learning Django. It contains practi
 - [Questions and Answers](#questions-and-answers)
   - [Q: When I run `python3 manage.py migrate`, where do the default migrations come from? Where is that code written?](#q-when-i-run-python3-managepy-migrate-where-do-the-default-migrations-come-from-where-is-that-code-written)
   - [Q: What is a project and what is an app in Django?](#q-what-is-a-project-and-what-is-an-app-in-django)
+  - [Q: Why does `Model.objects.get(some_id)` fail, while `Model.objects.get(pk=some_id)` works — aren't both just passing an integer?](#q-why-does-modelobjectsgetsome_id-fail-while-modelobjectsgetpksome_id-works--arent-both-just-passing-an-integer)
 
 ## Commonly Used Commands (Ubuntu)
 
@@ -896,3 +897,37 @@ python manage.py startapp blog
 would be an **app** — it gets its own `models.py`, `views.py`, `admin.py`, etc., and must be registered in `company/settings.py` under `INSTALLED_APPS` and wired into `company/urls.py`.
 
 **Analogy:** project = the house, apps = the rooms — each room (app) serves a distinct purpose, but they all belong to and are coordinated by the same house (project).
+
+### Q: Why does `Model.objects.get(some_id)` fail, while `Model.objects.get(pk=some_id)` works — aren't both just passing an integer?
+
+No — `.get()`/`.filter()` don't accept "the value to look up" as a positional argument at all. Positional args are reserved for `Q` objects; keyword args are how you specify field lookups.
+
+Internally, `get`/`filter` forward whatever you pass into `Q(*args, **kwargs)`, which stores its conditions as a list of "children":
+
+```python
+class Q(Node):
+    def __init__(self, *args, **kwargs):
+        super().__init__(children=list(args) + sorted(kwargs.items()), ...)
+```
+
+- `kwargs.items()` naturally produces `(field_lookup, value)` tuples — `id=20` becomes `('id', 20)`.
+- `*args` is meant for passing in **other `Q` objects**, so conditions can be combined with `&`/`|` (e.g. `Blog.objects.get(Q(id=20) | Q(slug='foo'))`).
+
+So `Blog.objects.get(20)` doesn't treat `20` as "the id" — it lands in that same `children` list as if it were already a `(key, value)` tuple or another `Q`/`Node`. When the query compiler later walks that tree to build SQL, it does roughly:
+
+```python
+for child in q_object.children:
+    if isinstance(child, Node):
+        ...  # nested Q, recurse
+    else:
+        key, value = child   # expects a 2-tuple
+```
+
+`20` is a plain `int`, not a 2-tuple, so `key, value = 20` raises exactly this: **`TypeError: cannot unpack non-iterable int object`**.
+
+**Fix:** use a keyword argument so `kwargs.items()` produces the `(key, value)` pair it expects:
+```python
+Blog.objects.get(pk=blog_id)   # kwargs.items() -> [('pk', blog_id)]
+```
+
+`pk` means "whatever the primary key field is" (`id` here) — it's the portable spelling that keeps working even if the primary key is later renamed or switched to a UUID.
