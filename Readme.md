@@ -18,6 +18,7 @@ This repository is my personal workspace for learning Django. It contains practi
   - [ModelAdmin attributes and methods](#modeladmin-attributes-and-methods)
   - [Commonly used ORM methods](#commonly-used-orm-methods)
   - [Foreign keys and relationships (ForeignKey, OneToOne, ManyToMany)](#foreign-keys-and-relationships-foreignkey-onetoone-manytomany)
+  - [Pagination (Paginator and Page)](#pagination-paginator-and-page)
 - [Questions and Answers](#questions-and-answers)
   - [Q: When I run `python3 manage.py migrate`, where do the default migrations come from? Where is that code written?](#q-when-i-run-python3-managepy-migrate-where-do-the-default-migrations-come-from-where-is-that-code-written)
   - [Q: What is a project and what is an app in Django?](#q-what-is-a-project-and-what-is-an-app-in-django)
@@ -855,6 +856,59 @@ class Blog(models.Model):
 - Adding a required (`null=False`) `ForeignKey` to a model that already has rows prompts Django's migration for a one-off default value.
 
 **Status in this project:** not yet adopted — `Blog.author` is currently commented out as a plain `CharField`; converting it to a real `ForeignKey` to `Author` is the natural next step.
+
+### Pagination (Paginator and Page)
+
+Rendering every row of a large queryset in one page is slow to query, slow to render, and bad UX. Django's `django.core.paginator` module splits a queryset into fixed-size chunks and lets the user request one chunk (page) at a time via the URL. Used in `blogs()` (`app/views.py`) for the blog listing page.
+
+**Two objects are involved:**
+
+- **`Paginator(queryset, per_page)`** — knows about the *whole* collection. Building it doesn't hit the database yet; it's just told "if I split this into chunks of N, how many chunks are there." Properties like `paginator.num_pages` (total pages) and `paginator.count` (total items) only run a query the first time they're accessed.
+- **`paginator.page(number)`** — returns a **`Page`** object for that specific chunk. *This* is what hits the database, running the equivalent of `LIMIT n OFFSET m`. The `Page` wraps just those rows plus metadata: `.has_next`, `.has_previous`, `.number`, `.next_page_number`, `.previous_page_number`.
+
+```python
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+
+def blogs(request):
+    all_blogs = Blog.objects.all().order_by('-created_at')
+    paginator = Paginator(all_blogs, 3)   # 3 posts per page
+
+    page = request.GET.get('page')        # e.g. "2" from ?page=2, or None
+
+    try:
+        blogs = paginator.page(page)
+    except PageNotAnInteger:
+        blogs = paginator.page(1)                      # no/invalid ?page= -> first page
+    except EmptyPage:
+        blogs = paginator.page(paginator.num_pages)     # ?page= out of range -> clamp to last page
+
+    return render(request, 'blogs.html', {"blogs": blogs})
+```
+
+**Where the page number comes from:** `request.GET.get('page')` reads the `page` query parameter straight off the URL (`/blogs/?page=2`). There's no session or cookie involved — each Prev/Next click is a fresh GET request carrying a different `page` value, and the view recomputes the slice from scratch every time.
+
+**Why the try/except matters:** `paginator.page()` can fail two distinct ways, and Django gives each a dedicated exception so bad input degrades gracefully instead of raising a 500:
+
+- **`PageNotAnInteger`** — `page` isn't a valid integer (no `?page=` at all on first visit, since `request.GET.get('page')` then returns `None`, or someone typed `?page=abc`). Handled by falling back to page 1.
+- **`EmptyPage`** — `page` is a valid integer but out of range (`?page=999` when there are only 5 pages). Handled by clamping to the last valid page.
+
+Without this handling, a malformed or out-of-range `page` value in the URL — easy for a user or crawler to produce by hand — would crash the view.
+
+**Template side (`templates/blogs.html`):** the `Page` object's attributes drive the Prev/Next controls without any arithmetic in the template:
+
+```html
+{% if blogs.has_previous %}
+    <li><a href="?page={{ blogs.previous_page_number }}">Previous</a></li>
+{% endif %}
+<li class="active"><a href="#">{{ blogs.number }}</a></li>
+{% if blogs.has_next %}
+    <li><a href="?page={{ blogs.next_page_number }}">Next</a></li>
+{% endif %}
+```
+
+**Current limitation:** a `Page` only knows its immediate neighbors (previous/next), not the full set of pages, so this template can't render a "1 2 3 4 5" numbered strip. That needs the `Paginator` object's `page_range` property, which isn't currently passed into the context (only `blogs` is) — passing `paginator` too and looping `{% for num in paginator.page_range %}` would add it.
+
+**Status in this project:** adopted for the blog list (`blogs()` view + `templates/blogs.html`) — numbered page links not yet added.
 
 ## Questions and Answers
 
