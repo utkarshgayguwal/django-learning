@@ -162,7 +162,7 @@
             <p class="post-category">{{ blog.category }}</p>
 
             <h2 class="title">
-              <a href="{% url 'blog_details' blog.id %}"
+              <a href="{% url 'blog_details' blog_id=blog.id %}"
                 >{{ blog.title }}</a
               >
             </h2>
