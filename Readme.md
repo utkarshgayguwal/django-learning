@@ -19,6 +19,7 @@ This repository is my personal workspace for learning Django. It contains practi
   - [Commonly used ORM methods](#commonly-used-orm-methods)
   - [Foreign keys and relationships (ForeignKey, OneToOne, ManyToMany)](#foreign-keys-and-relationships-foreignkey-onetoone-manytomany)
   - [Pagination (Paginator and Page)](#pagination-paginator-and-page)
+  - [Filtering (field lookups)](#filtering-field-lookups)
 - [Questions and Answers](#questions-and-answers)
   - [Q: When I run `python3 manage.py migrate`, where do the default migrations come from? Where is that code written?](#q-when-i-run-python3-managepy-migrate-where-do-the-default-migrations-come-from-where-is-that-code-written)
   - [Q: What is a project and what is an app in Django?](#q-what-is-a-project-and-what-is-an-app-in-django)
@@ -909,6 +910,63 @@ Without this handling, a malformed or out-of-range `page` value in the URL — e
 **Current limitation:** a `Page` only knows its immediate neighbors (previous/next), not the full set of pages, so this template can't render a "1 2 3 4 5" numbered strip. That needs the `Paginator` object's `page_range` property, which isn't currently passed into the context (only `blogs` is) — passing `paginator` too and looping `{% for num in paginator.page_range %}` would add it.
 
 **Status in this project:** adopted for the blog list (`blogs()` view + `templates/blogs.html`) — numbered page links not yet added.
+
+### Filtering (field lookups)
+
+`filter()` / `exclude()` / `get()` take keyword arguments shaped `field__lookuptype=value`. The double underscore separates the field name from the lookup type; omitting the lookup type defaults to `exact`.
+
+**Most commonly used lookups**
+
+| Lookup | Meaning | Example |
+|---|---|---|
+| `exact` | Exact match (default) | `Book.objects.filter(title__exact="Django")` |
+| `iexact` | Case-insensitive exact match | `Book.objects.filter(title__iexact="django")` |
+| `contains` | Case-sensitive substring match | `Book.objects.filter(title__contains="Web")` |
+| `icontains` | Case-insensitive substring match | `Book.objects.filter(title__icontains="web")` |
+| `in` | Value in a list/queryset | `Book.objects.filter(id__in=[1, 2, 3])` |
+| `gt` | Greater than | `Book.objects.filter(price__gt=500)` |
+| `gte` | Greater than or equal | `Book.objects.filter(price__gte=500)` |
+| `lt` | Less than | `Book.objects.filter(price__lt=500)` |
+| `lte` | Less than or equal | `Book.objects.filter(price__lte=500)` |
+| `startswith` / `istartswith` | Starts with (case-sensitive / insensitive) | `Book.objects.filter(title__istartswith="the")` |
+| `endswith` / `iendswith` | Ends with (case-sensitive / insensitive) | `Book.objects.filter(title__iendswith="guide")` |
+| `range` | Between two values (inclusive) | `Book.objects.filter(price__range=(100, 500))` |
+| `isnull` | Is NULL / not NULL | `Book.objects.filter(author__isnull=True)` |
+| `date` / `year` / `month` / `day` | Extract part of a `DateField`/`DateTimeField` | `Book.objects.filter(published__year=2024)` |
+| `regex` / `iregex` | Regex match | `Book.objects.filter(title__regex=r'^Django')` |
+
+**Chaining across relationships**
+
+The same `__` syntax traverses foreign keys — Django auto-joins the tables:
+
+```python
+Book.objects.filter(author__name__icontains="tolkien")
+```
+
+**`exclude()` — inverse of `filter()`**
+
+```python
+Book.objects.exclude(price__lt=100)  # everything except books cheaper than 100
+```
+
+**Combining filters**
+
+- Multiple kwargs in one `filter()` call = AND logic.
+- Chaining `.filter().filter()` is also AND, but each call is a separate SQL `WHERE`/join — matters with `ManyToMany`/reverse-FK to avoid unintended join behavior.
+- For OR logic, use `Q` objects (see [`Q()` objects](#commonly-used-orm-methods) above):
+
+```python
+from django.db.models import Q
+Book.objects.filter(Q(price__lt=100) | Q(author__name__icontains="orwell"))
+```
+
+**Gotchas**
+
+- `icontains`/`istartswith` etc. depend on DB collation — SQLite is case-insensitive for ASCII by default anyway, so the effect is more visible on Postgres/MySQL.
+- `isnull=True` only matches actual `NULL`, not empty strings — those need `exact=""`.
+- Lookups on `DateTimeField` are timezone-aware if `USE_TZ=True`.
+
+Full reference: [Django field lookups](https://docs.djangoproject.com/en/stable/ref/models/querysets/#field-lookups).
 
 ## Questions and Answers
 
